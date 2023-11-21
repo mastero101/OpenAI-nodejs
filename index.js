@@ -8,6 +8,7 @@ const FormData = require('form-data');
 require('dotenv').config();
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+let openAiResponse;
 
 // Configuración de la grabación
 const recordingOptions = {
@@ -51,6 +52,13 @@ setTimeout(async () => {
 
   // Enviar el archivo de audio a OpenAI
   await sendAudioToOpenAI(wavFileName);
+  // Enviar texto a OpenAI y obtener la respuesta
+  try {
+    openAiResponse = await sendTextToOpenAI(text);
+    console.log('GPT:', openAiResponse);
+  } catch (error) {
+    console.error('Error al obtener respuesta de OpenAI:', error.message);
+  }
 }, 10000);
 
 // Función para enviar datos de audio a OpenAI
@@ -69,9 +77,29 @@ async function sendAudioToOpenAI(audioFilePath) {
       },
     });
 
-    console.log('Respuesta de OpenAI:', response.data.text);
+    console.log('Transcripcion:', response.data.text);
+    text = response.data.text;
   } catch (error) {
     console.error('Error al enviar datos de audio a OpenAI:', error.message);
   }
 }
 
+// Función para enviar texto a OpenAI ChatGPT 3.5 Turbo
+async function sendTextToOpenAI(text) {
+  try {
+    const openAiResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
+      messages: [{ role: 'user', content: text }],
+      model: 'gpt-3.5-turbo',
+      max_tokens: 300,
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      },
+    });
+
+    return openAiResponse.data.choices[0].message.content;
+  } catch (error) {
+    throw error;
+  }
+}
